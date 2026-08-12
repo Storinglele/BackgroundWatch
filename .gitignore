@@ -1,0 +1,6 @@
+.build/
+.swiftpm/
+.clang-cache/
+.swift-cache/
+*.app/
+.DS_Store

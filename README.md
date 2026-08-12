@@ -1,0 +1,73 @@
+# Background Watch
+
+原生 macOS 菜单栏工具，用于查看并停止本机正在运行的后台服务。
+
+点击菜单栏图标直接展开面板：上半部分是按规则识别出的服务（可停止），下半部分把其余进程分成「应用」和「开发进程」两组只读展示，按应用/可执行名去重计数——Chrome 的数十个进程会合并成一行。
+
+**不提供启动或重启功能**，只做观察和停止。
+
+## 环境要求
+
+- macOS 13 或更高
+- Swift 5.9+（Xcode 或 Command Line Tools 均可）
+
+## 构建运行
+
+```bash
+swift run                 # 直接运行
+./package-app.sh          # 打包成 BackgroundWatch.app
+```
+
+`package-app.sh` 会做 ad-hoc 签名。由于没有 Apple 开发者证书公证，从别处下载的 .app 首次打开会被 Gatekeeper 拦截，需要在「系统设置 → 隐私与安全性」里放行，或本地自行构建。
+
+打包出的 App 设置了 `LSUIElement`，只驻留菜单栏，不显示 Dock 图标。
+
+## 测试
+
+```bash
+swift run BackgroundWatchTests
+```
+
+用的不是 `swift test`。XCTest 随 Xcode 分发而不随 Command Line Tools 分发，在只装了 CLT 的机器上 `swift test` 会因为找不到 XCTest 模块而失败。测试套件因此做成普通可执行目标，任何能跑 Swift 的机器都能执行。
+
+核心逻辑在独立的 `BackgroundWatchCore` module 里，通过注入的 `CommandRunning` 喂假的 `ps` / `lsof` 输出做单元测试，不依赖运行时的真实进程状态。
+
+## 配置识别哪些服务
+
+默认规则很通用：持有监听端口的 node / python / java / ruby / deno 进程。
+
+要识别自己的服务，在 `~/.config/background-watch/services.json` 写规则：
+
+```json
+[
+  {
+    "name": "My API",
+    "matches": ["my-api", "--server.port"],
+    "requiresListeningPort": true
+  }
+]
+```
+
+- `matches` 里的每一个字符串都必须出现在进程命令行中（大小写不敏感）才算匹配
+- `requiresListeningPort` 可省略，默认 `false`；为 `true` 时进程必须持有 TCP 监听端口
+- 规则按顺序匹配，命中第一条即停止
+
+文件缺失、为空或格式错误时会回退到默认规则，不会让列表变空。示例见 `examples/services.json`。
+
+## 停止行为
+
+点「停止」后会先发 `SIGTERM`，然后每 250ms 轮询一次进程是否真的退出，最多等 5 秒。
+
+如果进程仍然存活（比如 shutdown hook 卡住的 JVM），面板会行内提示并给出「强制停止」按钮，确认后才发 `SIGKILL`。**不会自动升级到 SIGKILL**——对连着数据库的服务来说，未经确认的强杀可能丢数据。
+
+所有信号发送都记录到 `~/Library/Logs/BackgroundWatch.log`。
+
+只有被规则识别为服务的进程才能停止；「应用」和「开发进程」两组是纯只读的。
+
+## 已知限制
+
+进程扫描（`ps` + `lsof`）目前在主线程同步执行，单次约 0.5–0.7 秒，每 3 秒一次。面板打开时滚动可能有卡顿。异步化需要给 `CommandRunning` 加 `Sendable` 约束，尚未实现。
+
+## License
+
+MIT

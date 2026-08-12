@@ -1,0 +1,11 @@
+[
+  {
+    "name": "My API",
+    "matches": ["my-api", "--server.port"],
+    "requiresListeningPort": true
+  },
+  {
+    "name": "Local worker",
+    "matches": ["python", "worker.py"]
+  }
+]
