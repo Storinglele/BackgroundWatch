@@ -5,15 +5,36 @@ import Foundation
     @Published public private(set) var targets: [ClassifiedProcess] = []
     @Published public private(set) var apps: [GroupedProcess] = []
     @Published public private(set) var dev: [GroupedProcess] = []
-    private let scanner = ProcessScanner(); private let classifier = ServiceClassifier(); private let grouper = ProcessGrouper(); private let terminator = ProcessTerminator()
 
-    public init() { refresh(); Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } } }
+    private let scanner = ProcessScanner()
+    private let classifier = ServiceClassifier()
+    private let grouper = ProcessGrouper()
+    private let terminator = ProcessTerminator()
+    private var isScanning = false
 
+    public init() {
+        refresh()
+        Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }
+    }
+
+    /// `ps` and `lsof` cost roughly half a second together. Running that on the main thread
+    /// froze the panel for a fifth of every tick, so only the assignment happens here.
     public func refresh() {
-        let all = (try? scanner.scan().map(classifier.classify)) ?? []
-        targets = all.filter(\.isTarget)
-        let grouped = grouper.group(all)
-        apps = grouped.apps; dev = grouped.dev
+        guard !isScanning else { return } // a scan outliving the 3s tick must not pile up
+        isScanning = true
+        let scanner = scanner, classifier = classifier, grouper = grouper
+        Task.detached(priority: .utility) {
+            let all = (try? scanner.scan().map(classifier.classify)) ?? []
+            let grouped = grouper.group(all)
+            let targets = all.filter(\.isTarget)
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.targets = targets
+                self.apps = grouped.apps
+                self.dev = grouped.dev
+                self.isScanning = false
+            }
+        }
     }
 
     public func stop(_ item: ClassifiedProcess) async -> StopOutcome { await terminate(item, signal: SIGTERM, graceSeconds: 5) }

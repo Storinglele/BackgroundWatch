@@ -2,7 +2,7 @@ import Foundation
 
 public enum StopOutcome: Equatable, Sendable { case terminated, stillRunning, failed(String) }
 
-public struct ProcessTerminator {
+public struct ProcessTerminator: Sendable {
     public init() {}
 
     public func isRunning(_ pid: Int) -> Bool {

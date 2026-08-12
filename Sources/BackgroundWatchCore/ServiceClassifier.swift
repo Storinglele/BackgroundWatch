@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ServiceClassifier {
+public struct ServiceClassifier: Sendable {
     private let rules: [ServiceRule]
     public init(rules: [ServiceRule] = ServiceRules.load()) { self.rules = rules }
 

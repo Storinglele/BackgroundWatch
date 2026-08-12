@@ -2,7 +2,7 @@ import Foundation
 
 /// Splits everything that is not a tracked service into the two lists the menu shows:
 /// applications the user installed, and command-line development processes.
-public struct ProcessGrouper {
+public struct ProcessGrouper: Sendable {
     private static let appMarker = ".app/Contents/MacOS/"
     private static let nestedMarkers = ["/Contents/Frameworks/", "/Contents/Helpers/", "/Contents/PlugIns/", "/Contents/Library/", "XPCServices", ".appex/"]
     private static let systemPrefixes = ["/System/", "/Library/Apple/", "/usr/libexec/", "/usr/sbin/", "/usr/bin/", "/sbin/", "/bin/"]

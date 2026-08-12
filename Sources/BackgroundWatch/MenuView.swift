@@ -38,7 +38,7 @@ struct MenuView: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Toggle("开机自动启动", isOn: Binding(get: { launchAtLogin }, set: setLaunchAtLogin))
+                Toggle("开机自动启动", isOn: Binding(get: { launchAtLogin }, set: { @MainActor value in setLaunchAtLogin(value) }))
                     .toggleStyle(.checkbox)
                     .font(.caption)
                     .disabled(!LoginItem.isInstalled)

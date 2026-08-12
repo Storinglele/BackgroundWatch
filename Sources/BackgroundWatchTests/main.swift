@@ -1,12 +1,21 @@
 import BackgroundWatchCore
 import Foundation
 
-var failures = 0
+/// Top-level code is main-actor isolated under strict concurrency but not under the
+/// default settings, so the counter lives behind a lock rather than in a global var.
+final class Results: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    var failures: Int { lock.lock(); defer { lock.unlock() }; return count }
+    func record() { lock.lock(); count += 1; lock.unlock() }
+}
+let results = Results()
+
 func check(_ condition: Bool, _ label: String) {
-    if condition { print("  ok   \(label)") } else { failures += 1; print("  FAIL \(label)") }
+    if condition { print("  ok   \(label)") } else { results.record(); print("  FAIL \(label)") }
 }
 func checkEqual<T: Equatable>(_ actual: T, _ expected: T, _ label: String) {
-    if actual == expected { print("  ok   \(label)") } else { failures += 1; print("  FAIL \(label)\n         expected: \(expected)\n         actual:   \(actual)") }
+    if actual == expected { print("  ok   \(label)") } else { results.record(); print("  FAIL \(label)\n         expected: \(expected)\n         actual:   \(actual)") }
 }
 
 /// Keyed by argument list so one fake serves the two `ps` calls and `lsof`.
@@ -103,7 +112,7 @@ let terminator = ProcessTerminator()
 check(terminator.isRunning(Int(ProcessInfo.processInfo.processIdentifier)), "detects a live process")
 check(!terminator.isRunning(999_999), "detects a dead process")
 if case .success = terminator.send(SIGTERM, to: ClassifiedProcess(process: records.first { $0.pid == 800 }!, service: nil)) {
-    failures += 1; print("  FAIL refuses to signal non-target processes")
+    results.record(); print("  FAIL refuses to signal non-target processes")
 } else { print("  ok   refuses to signal non-target processes") }
 
 // A real child that traps SIGTERM proves the escalation path, not just the happy path.
@@ -131,5 +140,5 @@ Thread.detachNewThread { box.count = ((try? ProcessScanner().scan()) ?? []).coun
 check(done.wait(timeout: .now() + 10) != .timedOut, "real scan() does not deadlock on >64KB of ps output")
 check(box.count > 10, "real scan() returns records (got \(box.count))")
 
-print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILED")
-exit(failures == 0 ? 0 : 1)
+print(results.failures == 0 ? "\nALL PASS" : "\n\(results.failures) FAILED")
+exit(results.failures == 0 ? 0 : 1)

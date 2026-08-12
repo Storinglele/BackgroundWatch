@@ -1,7 +1,7 @@
 import Foundation
 
-public protocol CommandRunning { func run(_ command: String, arguments: [String]) throws -> String }
-public struct SystemCommandRunner: CommandRunning {
+public protocol CommandRunning: Sendable { func run(_ command: String, arguments: [String]) throws -> String }
+public struct SystemCommandRunner: CommandRunning, Sendable {
     public init() {}
     public func run(_ command: String, arguments: [String]) throws -> String {
         let p = Process(); let out = Pipe(); p.executableURL = URL(fileURLWithPath: command); p.arguments = arguments; p.standardOutput = out; p.standardError = FileHandle.nullDevice; try p.run()
@@ -13,7 +13,7 @@ public struct SystemCommandRunner: CommandRunning {
     }
 }
 
-public struct ProcessScanner {
+public struct ProcessScanner: Sendable {
     let runner: CommandRunning
     public init(runner: CommandRunning = SystemCommandRunner()) { self.runner = runner }
 
