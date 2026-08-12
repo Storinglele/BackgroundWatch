@@ -31,7 +31,10 @@ import Foundation
         interval = wanted
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: wanted, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            // Bind before the Task: capturing the weak optional itself is a capture of a
+            // mutable var, which stricter toolchains reject.
+            guard let store = self else { return }
+            Task { @MainActor in store.refresh() }
         }
     }
 
