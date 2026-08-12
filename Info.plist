@@ -4,6 +4,7 @@
 <dict>
     <key>CFBundleDisplayName</key><string>Background Watch</string>
     <key>CFBundleExecutable</key><string>BackgroundWatch</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleIdentifier</key><string>io.github.storinglele.background-watch</string>
     <key>CFBundleName</key><string>Background Watch</string>
     <key>CFBundlePackageType</key><string>APPL</string>

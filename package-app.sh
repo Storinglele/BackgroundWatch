@@ -10,6 +10,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/BackgroundWatch"
 cp "$ROOT/Info.plist" "$APP/Contents/Info.plist"
+cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 chmod +x "$APP/Contents/MacOS/BackgroundWatch"
 codesign --force --deep --sign - "$APP" >/dev/null
 echo "$APP"

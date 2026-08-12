@@ -22,6 +22,15 @@ swift run                 # 直接运行
 
 打包出的 App 设置了 `LSUIElement`，只驻留菜单栏，不显示 Dock 图标。
 
+应用图标是用 Core Graphics 画出来的，源码在 `Tools/make-icon.swift`。改动后重新生成：
+
+```bash
+swift Tools/make-icon.swift
+iconutil -c icns AppIcon.iconset -o Resources/AppIcon.icns && rm -rf AppIcon.iconset
+```
+
+菜单栏用的字形是 SF Symbol，但应用图标没有复用它——Apple 的 SF Symbols 许可禁止将符号用作 app icon 或 logo。
+
 ## 测试
 
 ```bash
