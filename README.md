@@ -14,9 +14,12 @@
 ## 构建运行
 
 ```bash
-swift run                 # 直接运行
-./package-app.sh          # 打包成 BackgroundWatch.app
+swift run                       # 直接运行
+./package-app.sh                # 打包成 BackgroundWatch.app
+./package-app.sh --install      # 打包并安装到 /Applications
 ```
+
+不加 `--install` 时 App 只留在项目目录里，「应用程序」文件夹和 Launchpad 都看不到它——那两处只索引 `/Applications` 和 `~/Applications`。
 
 `package-app.sh` 会做 ad-hoc 签名。由于没有 Apple 开发者证书公证，从别处下载的 .app 首次打开会被 Gatekeeper 拦截，需要在「系统设置 → 隐私与安全性」里放行，或本地自行构建。
 

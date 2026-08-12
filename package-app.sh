@@ -14,3 +14,12 @@ cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 chmod +x "$APP/Contents/MacOS/BackgroundWatch"
 codesign --force --deep --sign - "$APP" >/dev/null
 echo "$APP"
+
+if [[ "${1:-}" == "--install" ]]; then
+  # The build output is invisible to Finder and Launchpad; the app only shows up in the
+  # Applications list once it actually lives there.
+  DEST="/Applications/BackgroundWatch.app"
+  rm -rf "$DEST"
+  cp -R "$APP" "$DEST"
+  echo "$DEST"
+fi
