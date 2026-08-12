@@ -7,9 +7,16 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: macos-14
+    # Swift version follows the runner image's Xcode. Both are checked because the
+    # toolchains disagree: 5.10 rejected a weak-self capture that 6.x accepts, and
+    # 6.x tightens concurrency checks that 5.10 only warns about.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Swift version
         run: swift --version
