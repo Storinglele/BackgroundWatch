@@ -5,34 +5,59 @@ import Foundation
     @Published public private(set) var targets: [ClassifiedProcess] = []
     @Published public private(set) var apps: [GroupedProcess] = []
     @Published public private(set) var dev: [GroupedProcess] = []
+    @Published public private(set) var scanError: String?
 
     private let scanner = ProcessScanner()
     private let classifier = ServiceClassifier()
     private let grouper = ProcessGrouper()
     private let terminator = ProcessTerminator()
+    private var timer: Timer?
+    private var interval: TimeInterval = .infinity
     private var isScanning = false
 
+    private static let activeInterval: TimeInterval = 3
+    private static let idleInterval: TimeInterval = 30
+
     public init() {
-        refresh()
-        Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in Task { @MainActor in self?.refresh() } }
+        setActive(false) // also performs the first scan, so the panel is not blank on open
     }
 
-    /// `ps` and `lsof` cost roughly half a second together. Running that on the main thread
-    /// froze the panel for a fifth of every tick, so only the assignment happens here.
+    /// Nobody is reading the list while the panel is closed and every cycle costs three
+    /// subprocesses, so the idle cadence is an order of magnitude slower.
+    public func setActive(_ active: Bool) {
+        refresh()
+        let wanted = active ? Self.activeInterval : Self.idleInterval
+        guard wanted != interval else { return }
+        interval = wanted
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: wanted, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refresh() }
+        }
+    }
+
+    /// `ps` and `lsof` cost roughly a third of a second together. Running that on the main
+    /// thread stalled the panel, so only the assignment happens here.
     public func refresh() {
-        guard !isScanning else { return } // a scan outliving the 3s tick must not pile up
+        guard !isScanning else { return } // a scan outliving the tick must not pile up
         isScanning = true
         let scanner = scanner, classifier = classifier, grouper = grouper
         Task.detached(priority: .utility) {
-            let all = (try? scanner.scan().map(classifier.classify)) ?? []
-            let grouped = grouper.group(all)
-            let targets = all.filter(\.isTarget)
+            let outcome: Result<[ClassifiedProcess], Error>
+            do { outcome = .success(try scanner.scan().map(classifier.classify)) } catch { outcome = .failure(error) }
+            let grouped = (try? outcome.get()).map(grouper.group)
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                self.targets = targets
-                self.apps = grouped.apps
-                self.dev = grouped.dev
                 self.isScanning = false
+                switch outcome {
+                case .success(let all):
+                    self.scanError = nil
+                    self.targets = all.filter(\.isTarget)
+                    self.apps = grouped?.apps ?? []
+                    self.dev = grouped?.dev ?? []
+                case .failure(let error):
+                    // Keep the last good list on screen rather than blanking it.
+                    self.scanError = error.localizedDescription
+                }
             }
         }
     }

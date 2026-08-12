@@ -11,6 +11,9 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/BackgroundWatch"
 cp "$ROOT/Info.plist" "$APP/Contents/Info.plist"
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+# SwiftPM emits localized strings into a separate module bundle that Bundle.module
+# resolves from the app's Resources directory.
+cp -R "$(swift build -c release --show-bin-path)/BackgroundWatch_BackgroundWatch.bundle" "$APP/Contents/Resources/"
 chmod +x "$APP/Contents/MacOS/BackgroundWatch"
 codesign --force --deep --sign - "$APP" >/dev/null
 echo "$APP"

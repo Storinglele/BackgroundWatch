@@ -6,6 +6,8 @@
 
 **不提供启动或重启功能**，只做观察和停止。
 
+<img src="docs/screenshot.png" width="347" alt="面板截图">
+
 ## 环境要求
 
 - macOS 13 或更高
@@ -84,13 +86,23 @@ swift run BackgroundWatchTests
 
 只有 App 安装在 `/Applications` 时该选项才可用——从构建目录注册会留下一个指向临时路径的登录项，下次 `swift build` 清理后就失效了。若系统要求确认，面板会提示并提供跳转到「系统设置 → 通用 → 登录项」的按钮。
 
+## 界面语言
+
+界面跟随系统语言，提供简体中文和英文，**默认简体中文**。
+
+字符串在 `Sources/BackgroundWatch/Resources/<locale>.lproj/Localizable.strings`。新增语言只需加一个 `.lproj` 目录并在 `Info.plist` 的 `CFBundleLocalizations` 里登记。
+
+语言协商没有走 SwiftUI 的隐式 `Text("key")` 查找——SwiftPM 把本地化资源放在独立的 module bundle 里，而隐式查找只搜索 `Bundle.main`。实现见 `Localization.swift`。
+
 ## 性能
 
 一次扫描（两次 `ps` 加一次 `lsof`）约 0.38 秒，在后台线程执行，只有结果回主线程赋值。
 
 实测：主线程上的 50ms 心跳在扫描期间保持 0.051 秒的稳定间隔，无停顿；改回主线程同步执行则会出现最大 0.23 秒的卡顿。
 
-扫描每 3 秒一次。若某次扫描超过 3 秒，下一次会被跳过而不是堆积排队。
+扫描频率随面板状态自适应——打开时 3 秒一次，关闭后退到 30 秒一次。面板关着的时候没人在读这个列表，而每个周期要花掉三个子进程。实测空闲功耗从约 6% 的一个核心降到约 0.7%。
+
+若某次扫描超过当前间隔，下一次会被跳过而不是堆积排队。扫描失败不会清空列表，而是保留上一次的结果并在面板顶部显示错误。
 
 ## License
 

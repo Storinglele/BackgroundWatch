@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Build with strict concurrency
+        run: swift build -c release -Xswiftc -strict-concurrency=complete
+
+      # XCTest is not available on every machine, so the suite is a plain executable.
+      - name: Test
+        run: swift run BackgroundWatchTests
+
+      - name: Package app bundle
+        run: ./package-app.sh

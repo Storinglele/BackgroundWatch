@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private let store = ProcessStore()
@@ -24,7 +24,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover(_:))
         let hosting = NSHostingController(rootView: MenuView(store: store))
-        popover = NSPopover(); popover.contentViewController = hosting; popover.behavior = .transient; popover.contentSize = NSSize(width: 360, height: 420)
+        // Without this the popover keeps a fixed height and collapsed groups leave a large
+        // empty gap below the content.
+        hosting.sizingOptions = [.preferredContentSize]
+        popover = NSPopover(); popover.contentViewController = hosting; popover.behavior = .transient; popover.delegate = self
         NSLog("BackgroundWatch: status item ready")
     }
 
@@ -33,11 +36,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
+            store.setActive(true)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             // An .accessory app is never frontmost on its own, so the popover would open
             // without key focus and swallow the first click.
             if #available(macOS 14.0, *) { NSApp.activate() } else { NSApp.activate(ignoringOtherApps: true) }
         }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        store.setActive(false)
     }
 }
 

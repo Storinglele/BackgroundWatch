@@ -14,19 +14,24 @@ struct MenuView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("业务 / 开发服务").font(.headline)
-            if store.targets.isEmpty { Text("没有发现目标服务").foregroundStyle(.secondary) }
+            Text(L("services.title")).font(.headline)
+            if let error = store.scanError {
+                Text(L("services.scanFailed", error)).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+            } else if store.targets.isEmpty {
+                Text(L("services.empty")).foregroundStyle(.secondary)
+            }
             ForEach(store.targets) { target($0) }
 
             Divider()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
-                    DisclosureGroup(heading("应用", store.apps.count)) { ForEach(store.apps) { row($0) } }
-                    DisclosureGroup(heading("开发进程", store.dev.count)) { ForEach(store.dev) { row($0) } }
+                    DisclosureGroup(L("group.heading", L("group.apps"), String(store.apps.count))) { ForEach(store.apps) { row($0) } }
+                    DisclosureGroup(L("group.heading", L("group.dev"), String(store.dev.count))) { ForEach(store.dev) { row($0) } }
                 }
             }
             .frame(maxHeight: 260)
+            .fixedSize(horizontal: false, vertical: true)
 
             Divider()
             footer
@@ -38,33 +43,23 @@ struct MenuView: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Toggle("开机自动启动", isOn: Binding(get: { launchAtLogin }, set: { @MainActor value in setLaunchAtLogin(value) }))
+                Toggle(L("login.toggle"), isOn: Binding(get: { launchAtLogin }, set: { @MainActor value in setLaunchAtLogin(value) }))
                     .toggleStyle(.checkbox)
                     .font(.caption)
                     .disabled(!LoginItem.isInstalled)
                 Spacer()
-                Button("退出") { NSApplication.shared.terminate(nil) }
+                Button(L("action.quit")) { NSApplication.shared.terminate(nil) }
             }
             if !LoginItem.isInstalled {
-                Text("把 App 移到「应用程序」后才能开启").font(.caption).foregroundStyle(.secondary)
+                Text(L("login.needsInstall")).font(.caption).foregroundStyle(.secondary)
             } else if LoginItem.needsApproval {
                 HStack(spacing: 6) {
-                    Text("需要在系统设置中批准").font(.caption).foregroundStyle(.secondary)
-                    Button("打开设置") { LoginItem.openSettings() }.controlSize(.small)
+                    Text(L("login.needsApproval")).font(.caption).foregroundStyle(.secondary)
+                    Button(L("login.openSettings")) { LoginItem.openSettings() }.controlSize(.small)
                 }
             }
             if let loginError { Text(loginError).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true) }
         }
-    }
-
-    private func setLaunchAtLogin(_ enabled: Bool) {
-        do {
-            try LoginItem.setEnabled(enabled)
-            loginError = nil
-        } catch {
-            loginError = error.localizedDescription
-        }
-        launchAtLogin = LoginItem.isEnabled
     }
 
     private func target(_ item: ClassifiedProcess) -> some View {
@@ -73,30 +68,30 @@ struct MenuView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.service?.name ?? "服务")
+                    Text(item.service?.name ?? L("services.unnamed"))
                     Text(detail(item.process)).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 if state == .stopping { ProgressView().controlSize(.small) }
-                else if state == nil { Button("停止") { rows[pid] = .confirming }.buttonStyle(.borderedProminent) }
+                else if state == nil { Button(L("action.stop")) { rows[pid] = .confirming }.buttonStyle(.borderedProminent) }
             }
             switch state {
             case .confirming:
-                ask("确认停止 \(item.service?.name ?? "该服务")？将发送 SIGTERM 并等待最多 5 秒。", confirm: "停止", pid: pid) {
+                ask(L("confirm.stop", item.service?.name ?? L("services.unnamed")), confirm: L("action.stop"), pid: pid) {
                     Task { await run(item, force: false) }
                 }
             case .forceConfirm:
-                ask("5 秒内没有响应 SIGTERM。SIGKILL 会立即终止它，未写入的数据会丢失。", confirm: "强制停止", pid: pid) {
+                ask(L("confirm.force"), confirm: L("action.force"), pid: pid) {
                     Task { await run(item, force: true) }
                 }
             case .failed(let message):
                 HStack {
                     Text(message).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
                     Spacer()
-                    Button("好") { rows[pid] = nil }.controlSize(.small)
+                    Button(L("action.ok")) { rows[pid] = nil }.controlSize(.small)
                 }
             case .stopping:
-                Text("停止中…").font(.caption).foregroundStyle(.secondary)
+                Text(L("status.stopping")).font(.caption).foregroundStyle(.secondary)
             case nil:
                 EmptyView()
             }
@@ -108,7 +103,7 @@ struct MenuView: View {
             Text(text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button(confirm, role: .destructive, action: action).controlSize(.small)
-                Button("取消") { rows[pid] = nil }.controlSize(.small)
+                Button(L("action.cancel")) { rows[pid] = nil }.controlSize(.small)
             }
         }
     }
@@ -126,21 +121,30 @@ struct MenuView: View {
         rows[pid] = .stopping
         switch force ? await store.forceStop(item) : await store.stop(item) {
         case .terminated: rows[pid] = nil
-        case .stillRunning: rows[pid] = force ? .failed("SIGKILL 也没能终止它，进程可能处于不可中断状态。") : .forceConfirm
+        case .stillRunning: rows[pid] = force ? .failed(L("error.forceFailed")) : .forceConfirm
         case .failed(let message): rows[pid] = .failed(message)
         }
     }
 
-    // Built as String, not interpolated into Text directly: a LocalizedStringKey renders
-    // a pid of 1506 as "1,506".
+    private func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            try LoginItem.setEnabled(enabled)
+            loginError = nil
+        } catch {
+            loginError = error.localizedDescription
+        }
+        launchAtLogin = LoginItem.isEnabled
+    }
+
+    // pids go through String() first: a LocalizedStringKey would render 1506 as "1,506".
     private func detail(_ record: ProcessRecord) -> String {
         let ports = record.ports.map(String.init).joined(separator: ", ")
-        return ports.isEmpty ? "PID \(record.pid)" : "PID \(record.pid)  端口 \(ports)"
+        return ports.isEmpty ? L("detail.pid", String(record.pid)) : L("detail.pidPorts", String(record.pid), ports)
     }
 
     private func summary(_ item: GroupedProcess) -> String {
-        item.count > 1 ? "\(item.count) 个进程  PID \(item.representative.pid)" : "PID \(item.representative.pid)"
+        item.count > 1
+            ? L("group.processCount", String(item.count), String(item.representative.pid))
+            : L("detail.pid", String(item.representative.pid))
     }
-
-    private func heading(_ title: String, _ count: Int) -> String { "\(title) (\(count))" }
 }

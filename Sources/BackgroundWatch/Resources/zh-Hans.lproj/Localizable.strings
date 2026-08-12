@@ -1,0 +1,27 @@
+"services.title" = "业务 / 开发服务";
+"services.empty" = "没有发现目标服务";
+"services.unnamed" = "服务";
+"services.scanFailed" = "无法读取进程列表：%@";
+
+"action.stop" = "停止";
+"action.force" = "强制停止";
+"action.cancel" = "取消";
+"action.ok" = "好";
+"action.quit" = "退出";
+
+"status.stopping" = "停止中…";
+"confirm.stop" = "确认停止 %@？将发送 SIGTERM 并等待最多 5 秒。";
+"confirm.force" = "5 秒内没有响应 SIGTERM。SIGKILL 会立即终止它，未写入的数据会丢失。";
+"error.forceFailed" = "SIGKILL 也没能终止它，进程可能处于不可中断状态。";
+
+"detail.pid" = "PID %@";
+"detail.pidPorts" = "PID %1$@  端口 %2$@";
+"group.processCount" = "%1$@ 个进程  PID %2$@";
+"group.apps" = "应用";
+"group.dev" = "开发进程";
+"group.heading" = "%1$@ (%2$@)";
+
+"login.toggle" = "开机自动启动";
+"login.needsInstall" = "把 App 移到「应用程序」后才能开启";
+"login.needsApproval" = "需要在系统设置中批准";
+"login.openSettings" = "打开设置";

@@ -1,0 +1,27 @@
+"services.title" = "Services";
+"services.empty" = "No watched services running";
+"services.unnamed" = "Service";
+"services.scanFailed" = "Could not read the process list: %@";
+
+"action.stop" = "Stop";
+"action.force" = "Force Stop";
+"action.cancel" = "Cancel";
+"action.ok" = "OK";
+"action.quit" = "Quit";
+
+"status.stopping" = "Stopping…";
+"confirm.stop" = "Stop %@? SIGTERM will be sent, then up to 5 seconds of waiting.";
+"confirm.force" = "No response to SIGTERM within 5 seconds. SIGKILL terminates it immediately and unwritten data is lost.";
+"error.forceFailed" = "SIGKILL did not stop it either; the process may be uninterruptible.";
+
+"detail.pid" = "PID %@";
+"detail.pidPorts" = "PID %1$@  ports %2$@";
+"group.processCount" = "%1$@ processes  PID %2$@";
+"group.apps" = "Applications";
+"group.dev" = "Developer processes";
+"group.heading" = "%1$@ (%2$@)";
+
+"login.toggle" = "Launch at login";
+"login.needsInstall" = "Move the app to Applications to enable this";
+"login.needsApproval" = "Approval required in System Settings";
+"login.openSettings" = "Open Settings";
