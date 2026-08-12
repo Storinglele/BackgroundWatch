@@ -4,3 +4,5 @@
 .swift-cache/
 *.app/
 .DS_Store
+*.zip
+AppIcon.iconset/
