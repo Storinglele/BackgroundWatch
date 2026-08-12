@@ -4,6 +4,8 @@ import SwiftUI
 struct MenuView: View {
     @ObservedObject var store: ProcessStore
     @State private var rows: [Int: RowState] = [:]
+    @State private var launchAtLogin = LoginItem.isEnabled
+    @State private var loginError: String?
 
     /// Confirmation happens inline rather than in an alert: an alert takes key window
     /// away from a .transient popover, which closes it, and the follow-up force prompt
@@ -27,10 +29,42 @@ struct MenuView: View {
             .frame(maxHeight: 260)
 
             Divider()
-            Button("退出") { NSApplication.shared.terminate(nil) }
+            footer
         }
         .padding(14)
         .frame(width: 360)
+    }
+
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Toggle("开机自动启动", isOn: Binding(get: { launchAtLogin }, set: setLaunchAtLogin))
+                    .toggleStyle(.checkbox)
+                    .font(.caption)
+                    .disabled(!LoginItem.isInstalled)
+                Spacer()
+                Button("退出") { NSApplication.shared.terminate(nil) }
+            }
+            if !LoginItem.isInstalled {
+                Text("把 App 移到「应用程序」后才能开启").font(.caption).foregroundStyle(.secondary)
+            } else if LoginItem.needsApproval {
+                HStack(spacing: 6) {
+                    Text("需要在系统设置中批准").font(.caption).foregroundStyle(.secondary)
+                    Button("打开设置") { LoginItem.openSettings() }.controlSize(.small)
+                }
+            }
+            if let loginError { Text(loginError).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true) }
+        }
+    }
+
+    private func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            try LoginItem.setEnabled(enabled)
+            loginError = nil
+        } catch {
+            loginError = error.localizedDescription
+        }
+        launchAtLogin = LoginItem.isEnabled
     }
 
     private func target(_ item: ClassifiedProcess) -> some View {
